@@ -1,0 +1,20 @@
+version: '3.6'
+
+networks:
+  traefik-net:
+    name: traefik-net
+
+services:
+  traefik:
+    container_name: traefik
+    image: traefik:1.7
+    command:
+      - --docker
+      - --docker.exposedByDefault=false
+      - --docker.network=traefik-net
+    ports:
+      - 80:80
+    networks:
+      - traefik-net
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock

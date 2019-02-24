@@ -1,49 +1,60 @@
-version: '3'
+version: '3.6'
 
 networks:
   elk:
+    name: elk
+  traefik-net:
+    external: true
 
 volumes:
   elasticsearch:
     driver: local
 
 services:
-
   elasticsearch:
+    container_name: elasticsearch
+    image: docker.elastic.co/elasticsearch/elasticsearch:6.2.1
+    restart: unless-stopped
     environment:
       http.host: 0.0.0.0
       transport.host: 127.0.0.1
-    image: docker.elastic.co/elasticsearch/elasticsearch:6.2.1
     networks:
-      elk: null
-    ports:
-    - 9200:9200
-    restart: unless-stopped
+      - elk
+    expose:
+      - 9200
     volumes:
-    - elasticsearch:/usr/share/elasticsearch/data:rw
+      - elasticsearch:/usr/share/elasticsearch/data:rw
 
   logstash:
+    container_name: logstash
     image: docker.elastic.co/logstash/logstash-oss:6.2.1
     depends_on:
-    - elasticsearch
+      - elasticsearch
     networks:
-      elk: null
-    ports:
-    - 5044:5044
+      - elk
+    expose:
+      - 5044
     restart: unless-stopped
     volumes:
-    - ./etc/logstash/pipeline:/usr/share/logstash/pipeline:ro
+      - ./etc/logstash/pipeline:/usr/share/logstash/pipeline:ro
 
   kibana:
+    container_name: kibana
+    image: docker.elastic.co/kibana/kibana-oss:6.2.1
+    restart: unless-stopped
     depends_on:
-    - elasticsearch
+      - elasticsearch
     environment:
-      ELASTICSEARCH_PASSWORD: changeme
+      ELASTICSEARCH_PASSWORD: secret
       ELASTICSEARCH_URL: http://elasticsearch:9200
       ELASTICSEARCH_USERNAME: elastic
-    image: docker.elastic.co/kibana/kibana-oss:6.2.1
     networks:
-      elk: null
-    ports:
-    - 5601:5601
-    restart: unless-stopped
+      - elk
+      - traefik-net
+    expose:
+      - 5601
+    labels:
+      - "traefik.enable=true"
+      - "traefik.port=5601"
+      - "traefik.network=traefik-net"
+      - "traefik.frontend.rule=Host:viblo.lc"
